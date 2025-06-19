@@ -42,6 +42,7 @@ type EnvConfigSchema struct {
 	TracingEnabled     bool       `env:"TRACING_ENABLED"`
 	TrustProxy         bool       `env:"TRUST_PROXY"`
 	AnalyticsDisabled  bool       `env:"ANALYTICS_DISABLED"`
+	OpenIdConfigURL    string     `env:"OPENID_CONFIG_URL"`
 }
 
 var EnvConfig = &EnvConfigSchema{

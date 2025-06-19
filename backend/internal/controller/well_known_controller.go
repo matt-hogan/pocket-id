@@ -64,6 +64,10 @@ func (wkc *WellKnownController) openIDConfigurationHandler(c *gin.Context) {
 
 func (wkc *WellKnownController) computeOIDCConfiguration() ([]byte, error) {
 	appUrl := common.EnvConfig.AppURL
+	configUrl := common.EnvConfig.AppURL
+	if common.EnvConfig.OpenIdConfigURL != "" {
+		configUrl = common.EnvConfig.OpenIdConfigURL
+	}
 	alg, err := wkc.jwtService.GetKeyAlg()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get key algorithm: %w", err)
@@ -71,12 +75,12 @@ func (wkc *WellKnownController) computeOIDCConfiguration() ([]byte, error) {
 	config := map[string]any{
 		"issuer":                                appUrl,
 		"authorization_endpoint":                appUrl + "/authorize",
-		"token_endpoint":                        appUrl + "/api/oidc/token",
+		"token_endpoint":                        configUrl + "/api/oidc/token",
 		"userinfo_endpoint":                     appUrl + "/api/oidc/userinfo",
 		"end_session_endpoint":                  appUrl + "/api/oidc/end-session",
 		"introspection_endpoint":                appUrl + "/api/oidc/introspect",
 		"device_authorization_endpoint":         appUrl + "/api/oidc/device/authorize",
-		"jwks_uri":                              appUrl + "/.well-known/jwks.json",
+		"jwks_uri":                              configUrl + "/.well-known/jwks.json",
 		"grant_types_supported":                 []string{service.GrantTypeAuthorizationCode, service.GrantTypeRefreshToken, service.GrantTypeDeviceCode},
 		"scopes_supported":                      []string{"openid", "profile", "email", "groups"},
 		"claims_supported":                      []string{"sub", "given_name", "family_name", "name", "email", "email_verified", "preferred_username", "picture", "groups"},
