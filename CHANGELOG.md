@@ -1,3 +1,21 @@
+## [](https://github.com/pocket-id/pocket-id/compare/v1.3.1...v) (2025-06-19)
+
+### Features
+
+* allow setting unix socket mode ([#661](https://github.com/pocket-id/pocket-id/issues/661)) ([7677a3d](https://github.com/pocket-id/pocket-id/commit/7677a3de2c923c11a58bc8c4d1b2121d403a1504))
+* auto-focus on the login buttons ([#647](https://github.com/pocket-id/pocket-id/issues/647)) ([d679530](https://github.com/pocket-id/pocket-id/commit/d6795300b158b85dd9feadd561b6ecd891f5db0d))
+* configurable local ipv6 ranges for audit log ([#657](https://github.com/pocket-id/pocket-id/issues/657)) ([d548523](https://github.com/pocket-id/pocket-id/commit/d5485238b8fd4cc566af00eae2b17d69a119f991))
+* location filter for global audit log ([#662](https://github.com/pocket-id/pocket-id/issues/662)) ([ac5a121](https://github.com/pocket-id/pocket-id/commit/ac5a121f664b8127d0faf30c0f93432f30e7f33a))
+* ui accent colors ([#643](https://github.com/pocket-id/pocket-id/issues/643)) ([883877a](https://github.com/pocket-id/pocket-id/commit/883877adec6fc3e65bd5a705499449959b894fb5))
+* use icon instead of text on application image update hover state ([215531d](https://github.com/pocket-id/pocket-id/commit/215531d65c6683609b0b4a5505fdb72696fdb93e))
+
+### Bug Fixes
+
+* allow images with uppercase file extension ([1bcb50e](https://github.com/pocket-id/pocket-id/commit/1bcb50edc335886dd722a4c69960c48cc3cd1687))
+* center oidc client images if they are smaller than the box ([946c534](https://github.com/pocket-id/pocket-id/commit/946c534b0877a074a6b658060f9af27e4061397c))
+* explicitly cache images to prevent unexpected behavior ([2e5d268](https://github.com/pocket-id/pocket-id/commit/2e5d2687982186c12e530492292d49895cb6043a))
+* reduce duration of animations on login and signin page ([#648](https://github.com/pocket-id/pocket-id/issues/648)) ([d770448](https://github.com/pocket-id/pocket-id/commit/d77044882d5a41da22df1c0099c1eb1f20bcbc5b))
+* use inline style for dynamic background image URL instead of Tailwind class ([bef77ac](https://github.com/pocket-id/pocket-id/commit/bef77ac8dca2b98b6732677aaafbc28f79d00487))
 ## [](https://github.com/pocket-id/pocket-id/compare/v1.3.0...v) (2025-06-09)
 
 
