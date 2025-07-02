@@ -7,8 +7,9 @@
 
 	let {
 		selectedColor = $bindable(),
-		previousColor
-	}: { selectedColor: string; previousColor: string } = $props();
+		previousColor,
+		disabled = false
+	}: { selectedColor: string; previousColor: string; disabled?: boolean } = $props();
 	let showCustomColorDialog = $state(false);
 
 	const accentColors = [
@@ -30,10 +31,6 @@
 		selectedColor = accentValue;
 		applyAccentColor(accentValue);
 	}
-
-	function handleCustomColorApply(color: string) {
-		handleAccentColorChange(color);
-	}
 </script>
 
 <RadioGroup.Root
@@ -54,7 +51,7 @@
 	{@render colorOption('Custom', 'custom', false, true)}
 </RadioGroup.Root>
 
-<CustomColorDialog bind:open={showCustomColorDialog} onApply={handleCustomColorApply} />
+<CustomColorDialog bind:open={showCustomColorDialog} onApply={handleAccentColorChange} />
 
 {#snippet colorOption(
 	label: string,
@@ -66,9 +63,13 @@
 		<RadioGroup.Item id={color} value={color} class="sr-only" />
 		<Label
 			for={color}
-			class="cursor-pointer {isCustomColorSelection ? 'group' : ''}"
+			class={{
+				'cursor-pointer': !disabled,
+				'cursor-not-allowed': disabled,
+				group: isCustomColorSelection
+			}}
 			onclick={() => {
-				if (isCustomColorSelection) {
+				if (isCustomColorSelection && !disabled) {
 					showCustomColorDialog = true;
 				}
 			}}

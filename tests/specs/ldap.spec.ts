@@ -1,17 +1,20 @@
 import test, { expect } from '@playwright/test';
 import { cleanupBackend } from '../utils/cleanup.util';
 
-test.beforeEach(cleanupBackend);
+test.beforeEach(() => cleanupBackend());
 
 test.describe('LDAP Integration', () => {
-	test.skip(process.env.SKIP_LDAP_TESTS === "true", 'Skipping LDAP tests due to SKIP_LDAP_TESTS environment variable');
-	
+	test.skip(
+		process.env.SKIP_LDAP_TESTS === 'true',
+		'Skipping LDAP tests due to SKIP_LDAP_TESTS environment variable'
+	);
+
 	test('LDAP configuration is working properly', async ({ page }) => {
 		await page.goto('/settings/admin/application-configuration');
 
 		await page.getByRole('button', { name: 'Expand card' }).nth(2).click();
 
-		await expect(page.getByRole('button', { name: 'Disable' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Disable', exact: true })).toBeVisible();
 		await expect(page.getByLabel('LDAP URL')).toHaveValue(/ldap:\/\/.*/);
 		await expect(page.getByLabel('LDAP Base DN')).not.toBeEmpty();
 

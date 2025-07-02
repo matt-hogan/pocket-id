@@ -36,13 +36,13 @@ export const oidcClients = {
 		secret: 'PYjrE9u4v9GVqXKi52eur0eb2Ci4kc0x'
 	},
 	federated: {
-		id: "c48232ff-ff65-45ed-ae96-7afa8a9b443b",
+		id: 'c48232ff-ff65-45ed-ae96-7afa8a9b443b',
 		name: 'Federated',
 		callbackUrl: 'http://federated/auth/callback',
 		federatedJWT: {
-			issuer:   'https://external-idp.local',
+			issuer: 'https://external-idp.local',
 			audience: 'api://PocketID',
-			subject:  'c48232ff-ff65-45ed-ae96-7afa8a9b443b',
+			subject: 'c48232ff-ff65-45ed-ae96-7afa8a9b443b'
 		},
 		accessCodes: ['federated']
 	},
@@ -97,3 +97,38 @@ export const refreshTokens = [
 		expired: true
 	}
 ];
+
+export const signupTokens = {
+	valid: {
+		id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+		token: 'VALID1234567890A',
+		expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+		usageLimit: 1,
+		usageCount: 0,
+		createdAt: new Date().toISOString()
+	},
+	partiallyUsed: {
+		id: 'b2c3d4e5-f6g7-8901-bcde-f12345678901',
+		token: 'PARTIAL567890ABC',
+		expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+		usageLimit: 5,
+		usageCount: 2,
+		createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+	},
+	expired: {
+		id: 'c3d4e5f6-g7h8-9012-cdef-123456789012',
+		token: 'EXPIRED34567890B',
+		expiresAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+		usageLimit: 3,
+		usageCount: 1,
+		createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+	},
+	fullyUsed: {
+		id: 'd4e5f6g7-h8i9-0123-def0-234567890123',
+		token: 'FULLYUSED567890C',
+		expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+		usageLimit: 1,
+		usageCount: 1,
+		createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString()
+	}
+};

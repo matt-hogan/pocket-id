@@ -44,11 +44,17 @@ func NewUserController(group *gin.RouterGroup, authMiddleware *middleware.AuthMi
 	group.POST("/users/:id/one-time-access-token", authMiddleware.Add(), uc.createAdminOneTimeAccessTokenHandler)
 	group.POST("/users/:id/one-time-access-email", authMiddleware.Add(), uc.RequestOneTimeAccessEmailAsAdminHandler)
 	group.POST("/one-time-access-token/:token", rateLimitMiddleware.Add(rate.Every(10*time.Second), 5), uc.exchangeOneTimeAccessTokenHandler)
-	group.POST("/one-time-access-token/setup", uc.getSetupAccessTokenHandler)
 	group.POST("/one-time-access-email", rateLimitMiddleware.Add(rate.Every(10*time.Minute), 3), uc.RequestOneTimeAccessEmailAsUnauthenticatedUserHandler)
 
 	group.DELETE("/users/:id/profile-picture", authMiddleware.Add(), uc.resetUserProfilePictureHandler)
 	group.DELETE("/users/me/profile-picture", authMiddleware.WithAdminNotRequired().Add(), uc.resetCurrentUserProfilePictureHandler)
+
+	group.POST("/signup-tokens", authMiddleware.Add(), uc.createSignupTokenHandler)
+	group.GET("/signup-tokens", authMiddleware.Add(), uc.listSignupTokensHandler)
+	group.DELETE("/signup-tokens/:id", authMiddleware.Add(), uc.deleteSignupTokenHandler)
+	group.POST("/signup", rateLimitMiddleware.Add(rate.Every(1*time.Minute), 10), uc.signupHandler)
+	group.POST("/signup/setup", uc.signUpInitialAdmin)
+
 }
 
 type UserController struct {
@@ -440,14 +446,23 @@ func (uc *UserController) exchangeOneTimeAccessTokenHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, userDto)
 }
 
-// getSetupAccessTokenHandler godoc
-// @Summary Setup initial admin
-// @Description Generate setup access token for initial admin user configuration
+// signUpInitialAdmin godoc
+// @Summary Sign up initial admin user
+// @Description Sign up and generate setup access token for initial admin user
 // @Tags Users
+// @Accept json
+// @Produce json
+// @Param body body dto.SignUpDto true "User information"
 // @Success 200 {object} dto.UserDto
-// @Router /api/one-time-access-token/setup [post]
-func (uc *UserController) getSetupAccessTokenHandler(c *gin.Context) {
-	user, token, err := uc.userService.SetupInitialAdmin(c.Request.Context())
+// @Router /api/signup/setup [post]
+func (uc *UserController) signUpInitialAdmin(c *gin.Context) {
+	var input dto.SignUpDto
+	if err := c.ShouldBindJSON(&input); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	user, token, err := uc.userService.SignUpInitialAdmin(c.Request.Context(), input)
 	if err != nil {
 		_ = c.Error(err)
 		return
@@ -493,6 +508,128 @@ func (uc *UserController) updateUserGroups(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, userDto)
+}
+
+// createSignupTokenHandler godoc
+// @Summary Create signup token
+// @Description Create a new signup token that allows user registration
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param token body dto.SignupTokenCreateDto true "Signup token information"
+// @Success 201 {object} dto.SignupTokenDto
+// @Router /api/signup-tokens [post]
+func (uc *UserController) createSignupTokenHandler(c *gin.Context) {
+	var input dto.SignupTokenCreateDto
+	if err := c.ShouldBindJSON(&input); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	signupToken, err := uc.userService.CreateSignupToken(c.Request.Context(), input.ExpiresAt, input.UsageLimit)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	var tokenDto dto.SignupTokenDto
+	if err := dto.MapStruct(signupToken, &tokenDto); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusCreated, tokenDto)
+}
+
+// listSignupTokensHandler godoc
+// @Summary List signup tokens
+// @Description Get a paginated list of signup tokens
+// @Tags Users
+// @Param pagination[page] query int false "Page number for pagination" default(1)
+// @Param pagination[limit] query int false "Number of items per page" default(20)
+// @Param sort[column] query string false "Column to sort by"
+// @Param sort[direction] query string false "Sort direction (asc or desc)" default("asc")
+// @Success 200 {object} dto.Paginated[dto.SignupTokenDto]
+// @Router /api/signup-tokens [get]
+func (uc *UserController) listSignupTokensHandler(c *gin.Context) {
+	var sortedPaginationRequest utils.SortedPaginationRequest
+	if err := c.ShouldBindQuery(&sortedPaginationRequest); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	tokens, pagination, err := uc.userService.ListSignupTokens(c.Request.Context(), sortedPaginationRequest)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	var tokensDto []dto.SignupTokenDto
+	if err := dto.MapStructList(tokens, &tokensDto); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.Paginated[dto.SignupTokenDto]{
+		Data:       tokensDto,
+		Pagination: pagination,
+	})
+}
+
+// deleteSignupTokenHandler godoc
+// @Summary Delete signup token
+// @Description Delete a signup token by ID
+// @Tags Users
+// @Param id path string true "Token ID"
+// @Success 204 "No Content"
+// @Router /api/signup-tokens/{id} [delete]
+func (uc *UserController) deleteSignupTokenHandler(c *gin.Context) {
+	tokenID := c.Param("id")
+
+	err := uc.userService.DeleteSignupToken(c.Request.Context(), tokenID)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
+// signupWithTokenHandler godoc
+// @Summary Sign up
+// @Description Create a new user account
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param user body dto.SignUpDto true "User information"
+// @Success 201 {object} dto.SignUpDto
+// @Router /api/signup [post]
+func (uc *UserController) signupHandler(c *gin.Context) {
+	var input dto.SignUpDto
+	if err := c.ShouldBindJSON(&input); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	ipAddress := c.ClientIP()
+	userAgent := c.GetHeader("User-Agent")
+
+	user, accessToken, err := uc.userService.SignUp(c.Request.Context(), input, ipAddress, userAgent)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	maxAge := int(uc.appConfigService.GetDbConfig().SessionDuration.AsDurationMinutes().Seconds())
+	cookie.AddAccessTokenCookie(c, maxAge, accessToken)
+
+	var userDto dto.UserDto
+	if err := dto.MapStruct(user, &userDto); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusCreated, userDto)
 }
 
 // updateUser is an internal helper method, not exposed as an API endpoint
