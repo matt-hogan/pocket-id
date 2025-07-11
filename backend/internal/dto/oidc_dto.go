@@ -57,6 +57,7 @@ type AuthorizeOidcClientRequestDto struct {
 type AuthorizeOidcClientResponseDto struct {
 	Code        string `json:"code"`
 	CallbackURL string `json:"callbackURL"`
+	Issuer      string `json:"issuer"`
 }
 
 type AuthorizationRequiredDto struct {
@@ -149,7 +150,7 @@ type AuthorizedOidcClientDto struct {
 }
 
 type OidcClientPreviewDto struct {
-	IdToken     map[string]interface{} `json:"idToken"`
-	AccessToken map[string]interface{} `json:"accessToken"`
-	UserInfo    map[string]interface{} `json:"userInfo"`
+	IdToken     map[string]any `json:"idToken"`
+	AccessToken map[string]any `json:"accessToken"`
+	UserInfo    map[string]any `json:"userInfo"`
 }

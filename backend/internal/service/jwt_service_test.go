@@ -21,7 +21,7 @@ import (
 
 	"github.com/pocket-id/pocket-id/backend/internal/common"
 	"github.com/pocket-id/pocket-id/backend/internal/model"
-	"github.com/pocket-id/pocket-id/backend/internal/utils"
+	jwkutils "github.com/pocket-id/pocket-id/backend/internal/utils/jwk"
 )
 
 func TestJwtService_Init(t *testing.T) {
@@ -33,9 +33,16 @@ func TestJwtService_Init(t *testing.T) {
 		// Create a temporary directory for the test
 		tempDir := t.TempDir()
 
+		// Setup the environment variable required by the token verification
+		mockEnvConfig := &common.EnvConfigSchema{
+			AppURL:      "https://test.example.com",
+			KeysStorage: "file",
+			KeysPath:    tempDir,
+		}
+
 		// Initialize the JWT service
 		service := &JwtService{}
-		err := service.init(mockConfig, tempDir)
+		err := service.init(nil, mockConfig, mockEnvConfig)
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Verify the private key was set
@@ -66,9 +73,16 @@ func TestJwtService_Init(t *testing.T) {
 		// Create a temporary directory for the test
 		tempDir := t.TempDir()
 
+		// Setup the environment variable required by the token verification
+		mockEnvConfig := &common.EnvConfigSchema{
+			AppURL:      "https://test.example.com",
+			KeysStorage: "file",
+			KeysPath:    tempDir,
+		}
+
 		// First create a service to generate a key
 		firstService := &JwtService{}
-		err := firstService.init(mockConfig, tempDir)
+		err := firstService.init(nil, mockConfig, mockEnvConfig)
 		require.NoError(t, err)
 
 		// Get the key ID of the first service
@@ -77,7 +91,7 @@ func TestJwtService_Init(t *testing.T) {
 
 		// Now create a new service that should load the existing key
 		secondService := &JwtService{}
-		err = secondService.init(mockConfig, tempDir)
+		err = secondService.init(nil, mockConfig, mockEnvConfig)
 		require.NoError(t, err)
 
 		// Verify the loaded key has the same ID as the original
@@ -90,12 +104,19 @@ func TestJwtService_Init(t *testing.T) {
 		// Create a temporary directory for the test
 		tempDir := t.TempDir()
 
+		// Setup the environment variable required by the token verification
+		mockEnvConfig := &common.EnvConfigSchema{
+			AppURL:      "https://test.example.com",
+			KeysStorage: "file",
+			KeysPath:    tempDir,
+		}
+
 		// Create a new JWK and save it to disk
 		origKeyID := createECDSAKeyJWK(t, tempDir)
 
 		// Now create a new service that should load the existing key
 		svc := &JwtService{}
-		err := svc.init(mockConfig, tempDir)
+		err := svc.init(nil, mockConfig, mockEnvConfig)
 		require.NoError(t, err)
 
 		// Ensure loaded key has the right algorithm
@@ -113,12 +134,19 @@ func TestJwtService_Init(t *testing.T) {
 		// Create a temporary directory for the test
 		tempDir := t.TempDir()
 
+		// Setup the environment variable required by the token verification
+		mockEnvConfig := &common.EnvConfigSchema{
+			AppURL:      "https://test.example.com",
+			KeysStorage: "file",
+			KeysPath:    tempDir,
+		}
+
 		// Create a new JWK and save it to disk
 		origKeyID := createEdDSAKeyJWK(t, tempDir)
 
 		// Now create a new service that should load the existing key
 		svc := &JwtService{}
-		err := svc.init(mockConfig, tempDir)
+		err := svc.init(nil, mockConfig, mockEnvConfig)
 		require.NoError(t, err)
 
 		// Ensure loaded key has the right algorithm and curve
@@ -147,9 +175,16 @@ func TestJwtService_GetPublicJWK(t *testing.T) {
 		// Create a temporary directory for the test
 		tempDir := t.TempDir()
 
+		// Setup the environment variable required by the token verification
+		mockEnvConfig := &common.EnvConfigSchema{
+			AppURL:      "https://test.example.com",
+			KeysStorage: "file",
+			KeysPath:    tempDir,
+		}
+
 		// Create a JWT service with initialized key
 		service := &JwtService{}
-		err := service.init(mockConfig, tempDir)
+		err := service.init(nil, mockConfig, mockEnvConfig)
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Get the JWK (public key)
@@ -178,12 +213,19 @@ func TestJwtService_GetPublicJWK(t *testing.T) {
 		// Create a temporary directory for the test
 		tempDir := t.TempDir()
 
+		// Setup the environment variable required by the token verification
+		mockEnvConfig := &common.EnvConfigSchema{
+			AppURL:      "https://test.example.com",
+			KeysStorage: "file",
+			KeysPath:    tempDir,
+		}
+
 		// Create an ECDSA key and save it as JWK
 		originalKeyID := createECDSAKeyJWK(t, tempDir)
 
 		// Create a JWT service that loads the ECDSA key
 		service := &JwtService{}
-		err := service.init(mockConfig, tempDir)
+		err := service.init(nil, mockConfig, mockEnvConfig)
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Get the JWK (public key)
@@ -216,12 +258,19 @@ func TestJwtService_GetPublicJWK(t *testing.T) {
 		// Create a temporary directory for the test
 		tempDir := t.TempDir()
 
+		// Setup the environment variable required by the token verification
+		mockEnvConfig := &common.EnvConfigSchema{
+			AppURL:      "https://test.example.com",
+			KeysStorage: "file",
+			KeysPath:    tempDir,
+		}
+
 		// Create an EdDSA key and save it as JWK
 		originalKeyID := createEdDSAKeyJWK(t, tempDir)
 
 		// Create a JWT service that loads the EdDSA key
 		service := &JwtService{}
-		err := service.init(mockConfig, tempDir)
+		err := service.init(nil, mockConfig, mockEnvConfig)
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Get the JWK (public key)
@@ -276,16 +325,16 @@ func TestGenerateVerifyAccessToken(t *testing.T) {
 	})
 
 	// Setup the environment variable required by the token verification
-	originalAppURL := common.EnvConfig.AppURL
-	common.EnvConfig.AppURL = "https://test.example.com"
-	defer func() {
-		common.EnvConfig.AppURL = originalAppURL
-	}()
+	mockEnvConfig := &common.EnvConfigSchema{
+		AppURL:      "https://test.example.com",
+		KeysStorage: "file",
+		KeysPath:    tempDir,
+	}
 
 	t.Run("generates token for regular user", func(t *testing.T) {
 		// Create a JWT service
 		service := &JwtService{}
-		err := service.init(mockConfig, tempDir)
+		err := service.init(nil, mockConfig, mockEnvConfig)
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Create a test user
@@ -328,7 +377,7 @@ func TestGenerateVerifyAccessToken(t *testing.T) {
 	t.Run("generates token for admin user", func(t *testing.T) {
 		// Create a JWT service
 		service := &JwtService{}
-		err := service.init(mockConfig, tempDir)
+		err := service.init(nil, mockConfig, mockEnvConfig)
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Create a test admin user
@@ -364,7 +413,7 @@ func TestGenerateVerifyAccessToken(t *testing.T) {
 		})
 
 		service := &JwtService{}
-		err := service.init(customMockConfig, tempDir)
+		err := service.init(nil, customMockConfig, mockEnvConfig)
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Create a test user
@@ -399,7 +448,10 @@ func TestGenerateVerifyAccessToken(t *testing.T) {
 
 		// Create a JWT service that loads the key
 		service := &JwtService{}
-		err := service.init(mockConfig, tempDir)
+		err := service.init(nil, mockConfig, &common.EnvConfigSchema{
+			KeysStorage: "file",
+			KeysPath:    tempDir,
+		})
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Verify it loaded the right key
@@ -453,7 +505,10 @@ func TestGenerateVerifyAccessToken(t *testing.T) {
 
 		// Create a JWT service that loads the key
 		service := &JwtService{}
-		err := service.init(mockConfig, tempDir)
+		err := service.init(nil, mockConfig, &common.EnvConfigSchema{
+			KeysStorage: "file",
+			KeysPath:    tempDir,
+		})
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Verify it loaded the right key
@@ -507,7 +562,10 @@ func TestGenerateVerifyAccessToken(t *testing.T) {
 
 		// Create a JWT service that loads the key
 		service := &JwtService{}
-		err := service.init(mockConfig, tempDir)
+		err := service.init(nil, mockConfig, &common.EnvConfigSchema{
+			KeysStorage: "file",
+			KeysPath:    tempDir,
+		})
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Verify it loaded the right key
@@ -563,16 +621,16 @@ func TestGenerateVerifyIdToken(t *testing.T) {
 	})
 
 	// Setup the environment variable required by the token verification
-	originalAppURL := common.EnvConfig.AppURL
-	common.EnvConfig.AppURL = "https://test.example.com"
-	defer func() {
-		common.EnvConfig.AppURL = originalAppURL
-	}()
+	mockEnvConfig := &common.EnvConfigSchema{
+		AppURL:      "https://test.example.com",
+		KeysStorage: "file",
+		KeysPath:    tempDir,
+	}
 
 	t.Run("generates and verifies ID token with standard claims", func(t *testing.T) {
 		// Create a JWT service
 		service := &JwtService{}
-		err := service.init(mockConfig, tempDir)
+		err := service.init(nil, mockConfig, mockEnvConfig)
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Create test claims
@@ -601,7 +659,7 @@ func TestGenerateVerifyIdToken(t *testing.T) {
 			assert.Equal(t, []string{clientID}, audience, "Audience should contain the client ID")
 		issuer, ok := claims.Issuer()
 		_ = assert.True(t, ok, "Issuer not found in token") &&
-			assert.Equal(t, common.EnvConfig.AppURL, issuer, "Issuer should match app URL")
+			assert.Equal(t, service.envConfig.AppURL, issuer, "Issuer should match app URL")
 
 		// Check token expiration time is approximately 1 hour from now
 		expectedExp := time.Now().Add(1 * time.Hour)
@@ -614,7 +672,7 @@ func TestGenerateVerifyIdToken(t *testing.T) {
 	t.Run("can accept expired tokens if told so", func(t *testing.T) {
 		// Create a JWT service
 		service := &JwtService{}
-		err := service.init(mockConfig, tempDir)
+		err := service.init(nil, mockConfig, mockEnvConfig)
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Create test claims
@@ -628,7 +686,7 @@ func TestGenerateVerifyIdToken(t *testing.T) {
 		// Create a token that's already expired
 		token, err := jwt.NewBuilder().
 			Subject(userClaims["sub"].(string)).
-			Issuer(common.EnvConfig.AppURL).
+			Issuer(service.envConfig.AppURL).
 			Audience([]string{clientID}).
 			IssuedAt(time.Now().Add(-2 * time.Hour)).
 			Expiration(time.Now().Add(-1 * time.Hour)). // Expired 1 hour ago
@@ -666,13 +724,13 @@ func TestGenerateVerifyIdToken(t *testing.T) {
 			assert.Equal(t, userClaims["sub"], subject, "Token subject should match user ID")
 		issuer, ok := claims.Issuer()
 		_ = assert.True(t, ok, "Issuer not found in token") &&
-			assert.Equal(t, common.EnvConfig.AppURL, issuer, "Issuer should match app URL")
+			assert.Equal(t, service.envConfig.AppURL, issuer, "Issuer should match app URL")
 	})
 
 	t.Run("generates and verifies ID token with nonce", func(t *testing.T) {
 		// Create a JWT service
 		service := &JwtService{}
-		err := service.init(mockConfig, tempDir)
+		err := service.init(nil, mockConfig, mockEnvConfig)
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Create test claims with nonce
@@ -703,7 +761,7 @@ func TestGenerateVerifyIdToken(t *testing.T) {
 	t.Run("fails verification with incorrect issuer", func(t *testing.T) {
 		// Create a JWT service
 		service := &JwtService{}
-		err := service.init(mockConfig, tempDir)
+		err := service.init(nil, mockConfig, mockEnvConfig)
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Generate a token with standard claims
@@ -714,7 +772,7 @@ func TestGenerateVerifyIdToken(t *testing.T) {
 		require.NoError(t, err, "Failed to generate ID token")
 
 		// Temporarily change the app URL to simulate wrong issuer
-		common.EnvConfig.AppURL = "https://wrong-issuer.com"
+		service.envConfig.AppURL = "https://wrong-issuer.com"
 
 		// Verify should fail due to issuer mismatch
 		_, err = service.VerifyIdToken(tokenString, false)
@@ -731,7 +789,10 @@ func TestGenerateVerifyIdToken(t *testing.T) {
 
 		// Create a JWT service that loads the key
 		service := &JwtService{}
-		err := service.init(mockConfig, tempDir)
+		err := service.init(nil, mockConfig, &common.EnvConfigSchema{
+			KeysStorage: "file",
+			KeysPath:    tempDir,
+		})
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Verify it loaded the right key
@@ -762,7 +823,7 @@ func TestGenerateVerifyIdToken(t *testing.T) {
 			assert.Equal(t, "eddsauser456", subject, "Token subject should match user ID")
 		issuer, ok := claims.Issuer()
 		_ = assert.True(t, ok, "Issuer not found in token") &&
-			assert.Equal(t, common.EnvConfig.AppURL, issuer, "Issuer should match app URL")
+			assert.Equal(t, service.envConfig.AppURL, issuer, "Issuer should match app URL")
 
 		// Verify the key type is OKP
 		publicKey, err := service.GetPublicJWK()
@@ -784,7 +845,10 @@ func TestGenerateVerifyIdToken(t *testing.T) {
 
 		// Create a JWT service that loads the key
 		service := &JwtService{}
-		err := service.init(mockConfig, tempDir)
+		err := service.init(nil, mockConfig, &common.EnvConfigSchema{
+			KeysStorage: "file",
+			KeysPath:    tempDir,
+		})
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Verify it loaded the right key
@@ -795,7 +859,6 @@ func TestGenerateVerifyIdToken(t *testing.T) {
 		// Create test claims
 		userClaims := map[string]interface{}{
 			"sub":   "ecdsauser456",
-			"name":  "ECDSA User",
 			"email": "ecdsauser@example.com",
 		}
 		const clientID = "ecdsa-client-123"
@@ -815,7 +878,7 @@ func TestGenerateVerifyIdToken(t *testing.T) {
 			assert.Equal(t, "ecdsauser456", subject, "Token subject should match user ID")
 		issuer, ok := claims.Issuer()
 		_ = assert.True(t, ok, "Issuer not found in token") &&
-			assert.Equal(t, common.EnvConfig.AppURL, issuer, "Issuer should match app URL")
+			assert.Equal(t, service.envConfig.AppURL, issuer, "Issuer should match app URL")
 
 		// Verify the key type is EC
 		publicKey, err := service.GetPublicJWK()
@@ -837,7 +900,10 @@ func TestGenerateVerifyIdToken(t *testing.T) {
 
 		// Create a JWT service that loads the key
 		service := &JwtService{}
-		err := service.init(mockConfig, tempDir)
+		err := service.init(nil, mockConfig, &common.EnvConfigSchema{
+			KeysStorage: "file",
+			KeysPath:    tempDir,
+		})
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Verify it loaded the right key
@@ -868,17 +934,7 @@ func TestGenerateVerifyIdToken(t *testing.T) {
 			assert.Equal(t, "rsauser456", subject, "Token subject should match user ID")
 		issuer, ok := claims.Issuer()
 		_ = assert.True(t, ok, "Issuer not found in token") &&
-			assert.Equal(t, common.EnvConfig.AppURL, issuer, "Issuer should match app URL")
-
-		// Verify the key type is RSA
-		publicKey, err := service.GetPublicJWK()
-		require.NoError(t, err)
-		assert.Equal(t, jwa.RSA().String(), publicKey.KeyType().String(), "Key type should be RSA")
-
-		// Verify the algorithm is RS256
-		alg, ok := publicKey.Algorithm()
-		require.True(t, ok)
-		assert.Equal(t, jwa.RS256().String(), alg.String(), "Algorithm should be RS256")
+			assert.Equal(t, service.envConfig.AppURL, issuer, "Issuer should match app URL")
 	})
 }
 
@@ -892,16 +948,16 @@ func TestGenerateVerifyOAuthAccessToken(t *testing.T) {
 	})
 
 	// Setup the environment variable required by the token verification
-	originalAppURL := common.EnvConfig.AppURL
-	common.EnvConfig.AppURL = "https://test.example.com"
-	defer func() {
-		common.EnvConfig.AppURL = originalAppURL
-	}()
+	mockEnvConfig := &common.EnvConfigSchema{
+		AppURL:      "https://test.example.com",
+		KeysStorage: "file",
+		KeysPath:    tempDir,
+	}
 
 	t.Run("generates and verifies OAuth access token with standard claims", func(t *testing.T) {
 		// Create a JWT service
 		service := &JwtService{}
-		err := service.init(mockConfig, tempDir)
+		err := service.init(nil, mockConfig, mockEnvConfig)
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Create a test user
@@ -931,7 +987,7 @@ func TestGenerateVerifyOAuthAccessToken(t *testing.T) {
 			assert.Equal(t, []string{clientID}, audience, "Audience should contain the client ID")
 		issuer, ok := claims.Issuer()
 		_ = assert.True(t, ok, "Issuer not found in token") &&
-			assert.Equal(t, common.EnvConfig.AppURL, issuer, "Issuer should match app URL")
+			assert.Equal(t, service.envConfig.AppURL, issuer, "Issuer should match app URL")
 
 		// Check token expiration time is approximately 1 hour from now
 		expectedExp := time.Now().Add(1 * time.Hour)
@@ -944,7 +1000,7 @@ func TestGenerateVerifyOAuthAccessToken(t *testing.T) {
 	t.Run("fails verification for expired token", func(t *testing.T) {
 		// Create a JWT service with a mock function to generate an expired token
 		service := &JwtService{}
-		err := service.init(mockConfig, tempDir)
+		err := service.init(nil, mockConfig, mockEnvConfig)
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Create a test user
@@ -961,7 +1017,7 @@ func TestGenerateVerifyOAuthAccessToken(t *testing.T) {
 			Expiration(time.Now().Add(-1 * time.Hour)). // Expired 1 hour ago
 			IssuedAt(time.Now().Add(-2 * time.Hour)).
 			Audience([]string{clientID}).
-			Issuer(common.EnvConfig.AppURL).
+			Issuer(service.envConfig.AppURL).
 			Build()
 		require.NoError(t, err, "Failed to build token")
 
@@ -980,11 +1036,17 @@ func TestGenerateVerifyOAuthAccessToken(t *testing.T) {
 	t.Run("fails verification with invalid signature", func(t *testing.T) {
 		// Create two JWT services with different keys
 		service1 := &JwtService{}
-		err := service1.init(mockConfig, t.TempDir()) // Use a different temp dir
+		err := service1.init(nil, mockConfig, &common.EnvConfigSchema{
+			KeysStorage: "file",
+			KeysPath:    t.TempDir(), // Use a different temp dir
+		})
 		require.NoError(t, err, "Failed to initialize first JWT service")
 
 		service2 := &JwtService{}
-		err = service2.init(mockConfig, t.TempDir()) // Use a different temp dir
+		err = service2.init(nil, mockConfig, &common.EnvConfigSchema{
+			KeysStorage: "file",
+			KeysPath:    t.TempDir(), // Use a different temp dir
+		})
 		require.NoError(t, err, "Failed to initialize second JWT service")
 
 		// Create a test user
@@ -1014,7 +1076,10 @@ func TestGenerateVerifyOAuthAccessToken(t *testing.T) {
 
 		// Create a JWT service that loads the key
 		service := &JwtService{}
-		err := service.init(mockConfig, tempDir)
+		err := service.init(nil, mockConfig, &common.EnvConfigSchema{
+			KeysStorage: "file",
+			KeysPath:    tempDir,
+		})
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Verify it loaded the right key
@@ -1068,7 +1133,10 @@ func TestGenerateVerifyOAuthAccessToken(t *testing.T) {
 
 		// Create a JWT service that loads the key
 		service := &JwtService{}
-		err := service.init(mockConfig, tempDir)
+		err := service.init(nil, mockConfig, &common.EnvConfigSchema{
+			KeysStorage: "file",
+			KeysPath:    tempDir,
+		})
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Verify it loaded the right key
@@ -1122,7 +1190,10 @@ func TestGenerateVerifyOAuthAccessToken(t *testing.T) {
 
 		// Create a JWT service that loads the key
 		service := &JwtService{}
-		err := service.init(mockConfig, tempDir)
+		err := service.init(nil, mockConfig, &common.EnvConfigSchema{
+			KeysStorage: "file",
+			KeysPath:    tempDir,
+		})
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Verify it loaded the right key
@@ -1176,16 +1247,16 @@ func TestGenerateVerifyOAuthRefreshToken(t *testing.T) {
 	mockConfig := NewTestAppConfigService(&model.AppConfig{})
 
 	// Setup the environment variable required by the token verification
-	originalAppURL := common.EnvConfig.AppURL
-	common.EnvConfig.AppURL = "https://test.example.com"
-	defer func() {
-		common.EnvConfig.AppURL = originalAppURL
-	}()
+	mockEnvConfig := &common.EnvConfigSchema{
+		AppURL:      "https://test.example.com",
+		KeysStorage: "file",
+		KeysPath:    tempDir,
+	}
 
 	t.Run("generates and verifies refresh token", func(t *testing.T) {
 		// Create a JWT service
 		service := &JwtService{}
-		err := service.init(mockConfig, tempDir)
+		err := service.init(nil, mockConfig, mockEnvConfig)
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Create a test user
@@ -1211,7 +1282,7 @@ func TestGenerateVerifyOAuthRefreshToken(t *testing.T) {
 	t.Run("fails verification for expired token", func(t *testing.T) {
 		// Create a JWT service
 		service := &JwtService{}
-		err := service.init(mockConfig, tempDir)
+		err := service.init(nil, mockConfig, mockEnvConfig)
 		require.NoError(t, err, "Failed to initialize JWT service")
 
 		// Generate a token using JWT directly to create an expired token
@@ -1220,7 +1291,7 @@ func TestGenerateVerifyOAuthRefreshToken(t *testing.T) {
 			Expiration(time.Now().Add(-1 * time.Hour)). // Expired 1 hour ago
 			IssuedAt(time.Now().Add(-2 * time.Hour)).
 			Audience([]string{"client123"}).
-			Issuer(common.EnvConfig.AppURL).
+			Issuer(service.envConfig.AppURL).
 			Build()
 		require.NoError(t, err, "Failed to build token")
 
@@ -1236,11 +1307,17 @@ func TestGenerateVerifyOAuthRefreshToken(t *testing.T) {
 	t.Run("fails verification with invalid signature", func(t *testing.T) {
 		// Create two JWT services with different keys
 		service1 := &JwtService{}
-		err := service1.init(mockConfig, t.TempDir())
+		err := service1.init(nil, mockConfig, &common.EnvConfigSchema{
+			KeysStorage: "file",
+			KeysPath:    t.TempDir(), // Use a different temp dir
+		})
 		require.NoError(t, err, "Failed to initialize first JWT service")
 
 		service2 := &JwtService{}
-		err = service2.init(mockConfig, t.TempDir())
+		err = service2.init(nil, mockConfig, &common.EnvConfigSchema{
+			KeysStorage: "file",
+			KeysPath:    t.TempDir(), // Use a different temp dir
+		})
 		require.NoError(t, err, "Failed to initialize second JWT service")
 
 		// Generate a token with the first service
@@ -1308,7 +1385,10 @@ func TestGetTokenType(t *testing.T) {
 	// Initialize the JWT service
 	mockConfig := NewTestAppConfigService(&model.AppConfig{})
 	service := &JwtService{}
-	err := service.init(mockConfig, tempDir)
+	err := service.init(nil, mockConfig, &common.EnvConfigSchema{
+		KeysStorage: "file",
+		KeysPath:    tempDir,
+	})
 	require.NoError(t, err, "Failed to initialize JWT service")
 
 	buildTokenForType := func(t *testing.T, typ string, setClaimsFn func(b *jwt.Builder)) string {
@@ -1402,10 +1482,19 @@ func TestGetTokenType(t *testing.T) {
 func importKey(t *testing.T, privateKeyRaw any, path string) string {
 	t.Helper()
 
-	privateKey, err := utils.ImportRawKey(privateKeyRaw)
+	privateKey, err := jwkutils.ImportRawKey(privateKeyRaw, "", "")
 	require.NoError(t, err, "Failed to import private key")
 
-	err = SaveKeyJWK(privateKey, filepath.Join(path, PrivateKeyFile))
+	keyProvider := &jwkutils.KeyProviderFile{}
+	err = keyProvider.Init(jwkutils.KeyProviderOpts{
+		EnvConfig: &common.EnvConfigSchema{
+			KeysStorage: "file",
+			KeysPath:    path,
+		},
+	})
+	require.NoError(t, err, "Failed to init file key provider")
+
+	err = keyProvider.SaveKey(privateKey)
 	require.NoError(t, err, "Failed to save key")
 
 	kid, _ := privateKey.KeyID()

@@ -71,3 +71,36 @@ func TestGetDNProperty(t *testing.T) {
 		})
 	}
 }
+
+func TestConvertLdapIdToString(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "valid UTF-8 string",
+			input:    "simple-utf8-id",
+			expected: "simple-utf8-id",
+		},
+		{
+			name:     "binary UUID (16 bytes)",
+			input:    string([]byte{0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0, 0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf1}),
+			expected: "12345678-9abc-def0-1234-56789abcdef1",
+		},
+		{
+			name:     "non-UTF8, non-UUID returns base64",
+			input:    string([]byte{0xff, 0xfe, 0xfd, 0xfc}),
+			expected: "//79/A==",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := convertLdapIdToString(tt.input)
+			if got != tt.expected {
+				t.Errorf("Expected %q, got %q", tt.expected, got)
+			}
+		})
+	}
+}

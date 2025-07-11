@@ -11,13 +11,9 @@ import (
 	"github.com/pocket-id/pocket-id/backend/internal/common"
 	"github.com/pocket-id/pocket-id/backend/internal/job"
 	"github.com/pocket-id/pocket-id/backend/internal/utils"
-	"github.com/pocket-id/pocket-id/backend/internal/utils/signals"
 )
 
-func Bootstrap() error {
-	// Get a context that is canceled when the application is stopping
-	ctx := signals.SignalContext(context.Background())
-
+func Bootstrap(ctx context.Context) error {
 	initApplicationImages()
 
 	// Initialize the tracer and metrics exporter
@@ -59,11 +55,12 @@ func Bootstrap() error {
 
 	// Invoke all shutdown functions
 	// We give these a timeout of 5s
+	// Note: we use a background context because the run context has been canceled already
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer shutdownCancel()
 	err = utils.
 		NewServiceRunner(shutdownFns...).
-		Run(shutdownCtx)
+		Run(shutdownCtx) //nolint:contextcheck
 	if err != nil {
 		log.Printf("Error shutting down services: %v", err)
 	}

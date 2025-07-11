@@ -17,6 +17,7 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/go-webauthn/webauthn/protocol"
+	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/lestrrat-go/jwx/v3/jwt"
 	"gorm.io/gorm"
@@ -25,6 +26,7 @@ import (
 	"github.com/pocket-id/pocket-id/backend/internal/model"
 	datatype "github.com/pocket-id/pocket-id/backend/internal/model/types"
 	"github.com/pocket-id/pocket-id/backend/internal/utils"
+	jwkutils "github.com/pocket-id/pocket-id/backend/internal/utils/jwk"
 	"github.com/pocket-id/pocket-id/backend/resources"
 )
 
@@ -60,7 +62,7 @@ func (s *TestService) initExternalIdP() error {
 		return fmt.Errorf("failed to generate private key: %w", err)
 	}
 
-	s.externalIdPKey, err = utils.ImportRawKey(rawKey)
+	s.externalIdPKey, err = jwkutils.ImportRawKey(rawKey, jwa.ES256().String(), "")
 	if err != nil {
 		return fmt.Errorf("failed to import private key: %w", err)
 	}

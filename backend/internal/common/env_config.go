@@ -1,6 +1,8 @@
 package common
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"net/url"
 
@@ -18,9 +20,10 @@ const (
 )
 
 const (
-	DbProviderSqlite      DbProvider = "sqlite"
-	DbProviderPostgres    DbProvider = "postgres"
-	MaxMindGeoLiteCityUrl string     = "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=%s&suffix=tar.gz"
+	DbProviderSqlite        DbProvider = "sqlite"
+	DbProviderPostgres      DbProvider = "postgres"
+	MaxMindGeoLiteCityUrl   string     = "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=%s&suffix=tar.gz"
+	defaultSqliteConnString string     = "file:data/pocket-id.db?_pragma=journal_mode(WAL)&_pragma=busy_timeout(2500)&_txlock=immediate"
 )
 
 type EnvConfigSchema struct {
@@ -30,6 +33,9 @@ type EnvConfigSchema struct {
 	DbConnectionString string     `env:"DB_CONNECTION_STRING"`
 	UploadPath         string     `env:"UPLOAD_PATH"`
 	KeysPath           string     `env:"KEYS_PATH"`
+	KeysStorage        string     `env:"KEYS_STORAGE"`
+	EncryptionKey      string     `env:"ENCRYPTION_KEY"`
+	EncryptionKeyFile  string     `env:"ENCRYPTION_KEY_FILE"`
 	Port               string     `env:"PORT"`
 	Host               string     `env:"HOST"`
 	UnixSocket         string     `env:"UNIX_SOCKET"`
@@ -46,52 +52,83 @@ type EnvConfigSchema struct {
 	OpenIdConfigURL    string     `env:"OPENID_CONFIG_URL"`
 }
 
-var EnvConfig = &EnvConfigSchema{
-	AppEnv:             "production",
-	DbProvider:         "sqlite",
-	DbConnectionString: "file:data/pocket-id.db?_pragma=journal_mode(WAL)&_pragma=busy_timeout(2500)&_txlock=immediate",
-	UploadPath:         "data/uploads",
-	KeysPath:           "data/keys",
-	AppURL:             "http://localhost:1411",
-	Port:               "1411",
-	Host:               "0.0.0.0",
-	UnixSocket:         "",
-	UnixSocketMode:     "",
-	MaxMindLicenseKey:  "",
-	GeoLiteDBPath:      "data/GeoLite2-City.mmdb",
-	GeoLiteDBUrl:       MaxMindGeoLiteCityUrl,
-	LocalIPv6Ranges:    "",
-	UiConfigDisabled:   false,
-	MetricsEnabled:     false,
-	TracingEnabled:     false,
-	TrustProxy:         false,
-	AnalyticsDisabled:  false,
-}
+var EnvConfig = defaultConfig()
 
 func init() {
-	if err := env.ParseWithOptions(EnvConfig, env.Options{}); err != nil {
-		log.Fatal(err)
+	err := parseEnvConfig()
+	if err != nil {
+		log.Fatalf("Configuration error: %v", err)
+	}
+}
+
+func defaultConfig() EnvConfigSchema {
+	return EnvConfigSchema{
+		AppEnv:             "production",
+		DbProvider:         "sqlite",
+		DbConnectionString: "",
+		UploadPath:         "data/uploads",
+		KeysPath:           "data/keys",
+		KeysStorage:        "", // "database" or "file"
+		EncryptionKey:      "",
+		AppURL:             "http://localhost:1411",
+		Port:               "1411",
+		Host:               "0.0.0.0",
+		UnixSocket:         "",
+		UnixSocketMode:     "",
+		MaxMindLicenseKey:  "",
+		GeoLiteDBPath:      "data/GeoLite2-City.mmdb",
+		GeoLiteDBUrl:       MaxMindGeoLiteCityUrl,
+		LocalIPv6Ranges:    "",
+		UiConfigDisabled:   false,
+		MetricsEnabled:     false,
+		TracingEnabled:     false,
+		TrustProxy:         false,
+		AnalyticsDisabled:  false,
+	}
+}
+
+func parseEnvConfig() error {
+	err := env.ParseWithOptions(&EnvConfig, env.Options{})
+	if err != nil {
+		return fmt.Errorf("error parsing env config: %w", err)
 	}
 
 	// Validate the environment variables
 	switch EnvConfig.DbProvider {
 	case DbProviderSqlite:
 		if EnvConfig.DbConnectionString == "" {
-			log.Fatal("Missing required env var 'DB_CONNECTION_STRING' for SQLite database")
+			EnvConfig.DbConnectionString = defaultSqliteConnString
 		}
 	case DbProviderPostgres:
 		if EnvConfig.DbConnectionString == "" {
-			log.Fatal("Missing required env var 'DB_CONNECTION_STRING' for Postgres database")
+			return errors.New("missing required env var 'DB_CONNECTION_STRING' for Postgres database")
 		}
 	default:
-		log.Fatal("Invalid DB_PROVIDER value. Must be 'sqlite' or 'postgres'")
+		return errors.New("invalid DB_PROVIDER value. Must be 'sqlite' or 'postgres'")
 	}
 
 	parsedAppUrl, err := url.Parse(EnvConfig.AppURL)
 	if err != nil {
-		log.Fatal("APP_URL is not a valid URL")
+		return errors.New("APP_URL is not a valid URL")
 	}
 	if parsedAppUrl.Path != "" {
-		log.Fatal("APP_URL must not contain a path")
+		return errors.New("APP_URL must not contain a path")
 	}
+
+	switch EnvConfig.KeysStorage {
+	// KeysStorage defaults to "file" if empty
+	case "":
+		EnvConfig.KeysStorage = "file"
+	case "database":
+		// If KeysStorage is "database", a key must be specified
+		if EnvConfig.EncryptionKey == "" && EnvConfig.EncryptionKeyFile == "" {
+			return errors.New("ENCRYPTION_KEY or ENCRYPTION_KEY_FILE must be non-empty when KEYS_STORAGE is database")
+		}
+	case "file":
+		// All good, these are valid values
+	default:
+		return fmt.Errorf("invalid value for KEYS_STORAGE: %s", EnvConfig.KeysStorage)
+	}
+
+	return nil
 }
